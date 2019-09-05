@@ -1,0 +1,134 @@
+-- ----------------- 自己写的函数 ---------------------
+-- DELIMITER 设置结束符号为$$，默认是';' 
+DELIMITER $$
+
+USE `mycomic`$$
+
+DROP FUNCTION IF EXISTS `fn_getUserNames`$$
+
+CREATE FUNCTION fn_getUserNames(f_string VARCHAR(1000)) RETURNS VARCHAR(225) CHARSET utf8
+BEGIN 
+
+DECLARE f_delimiter VARCHAR(5) DEFAULT ',';  	-- 字符串默认分割符为 , 
+DECLARE result VARCHAR(225) DEFAULT '';
+DECLARE temp VARCHAR(225);
+DECLARE cnt INT DEFAULT 0; 
+DECLARE i INT DEFAULT 0; 
+SET cnt = 1+(LENGTH(f_string) - LENGTH(REPLACE(f_string,f_delimiter,''))); 
+WHILE i < cnt 
+DO 
+    SET i = i + 1; 
+    SET temp ='';
+    SELECT vc_user_name INTO temp FROM  sys_user WHERE vc_user_id = 
+	REVERSE(SUBSTRING_INDEX(REVERSE(SUBSTRING_INDEX(f_string,f_delimiter,i)),f_delimiter,1));
+    IF LENGTH(TRIM(temp))>0 THEN
+	SET result = CONCAT(result,',',temp);
+    END IF;
+END WHILE; 
+RETURN SUBSTRING(result,2);
+END$$
+-- 将结束符符设置回';'
+DELIMITER ;
+
+-- -------------------- 循环 -----------------------------
+
+一、while循环（简单、常用）
+
+DROP PROCEDURE IF EXISTS test;          #如果存在test存储过程则删除
+CREATE PROCEDURE test()                 #创建无参存储过程,名称为test
+BEGIN
+    DECLARE i INT;                      #申明变量
+    SET i = 0;                          #变量赋值
+    WHILE i < 10                        #结束循环的条件: 当i大于10时跳出while循环
+    DO
+        INSERT INTO test VALUES (i);    #往test表添加数据
+        SET i = i + 1;                  #循环一次,i加一
+    END WHILE;                          #结束while循环
+    SELECT * FROM test;                 #查看test表数据
+END;
+
+二、repeat循环（关键字until）
+
+DROP PROCEDURE IF EXISTS test;          #如果存在test存储过程则删除
+CREATE PROCEDURE test()                 #创建无参存储过程,名称为test
+BEGIN
+    DECLARE i INT;                      #申明变量
+    SET i = 0;                          #变量赋值
+    REPEAT
+        INSERT INTO test VALUES (i);    #往test表添加数据
+        SET i = i + 1;                  #循环一次,i加一
+    UNTIL i > 10 END REPEAT;            #结束循环的条件: 当i大于10时跳出repeat循环
+    SELECT * FROM test;                 #查看test表数据
+END;
+
+三、loop循环（关键字leave）
+
+DROP PROCEDURE IF EXISTS test;          #如果存在test存储过程则删除
+CREATE PROCEDURE test()                 #创建无参存储过程,名称为test
+BEGIN
+    DECLARE i INT;                      #申明变量
+    SET i = 0;                          #变量赋值
+    lp : LOOP                           #lp为循环体名,可随意 loop为关键字
+        INSERT INTO test VALUES (i);    #往test表添加数据
+        SET i = i + 1;                  #循环一次,i加一
+        IF i > 10 THEN                  #结束循环的条件: 当i大于10时跳出loop循环
+            LEAVE lp;
+        END IF; 
+    END LOOP;
+    SELECT * FROM test;                 #查看test表数据
+END
+
+-- -------------------- 游标 -----------------------------
+
+delimiter //  # 定义//为一句sql的结束标志，取消;的所代表的意义
+drop procedure if exists test;  # 如果存在名字为test的procedure则删除
+create procedure test()  # 创建（创建函数使用的关键字为function 函数名()）
+begin
+    declare old_pro varchar(30);  # 声明变量
+    declare temp_id int;
+    declare flag int default 0;
+    # 这是重点，定义一个游标来记录sql查询的结果(此处的知识点还有SQL的模糊查询，见补充)
+    declare s_list cursor for select id, province from temp_table where like "%省"; 
+    # 为下面while循环建立一个退出标志，当游标遍历完后将flag的值设置为1
+    declare continue handler for not found set flag=1;
+    open s_list;  # 打开游标
+    # 将游标中的值赋给定义好的变量，实现for循环的要点
+        fetch s_list into temp_id, old_pro;
+        while flag <> 1 do
+            # sql提供了字符串的切分，有left、right、substring、substring_index
+            # 在T-SQL中，局部变量必须以@作为前缀，声明方式set，select还有点差别
+            set @temp_s = substring_index(old_pro, "省", 1);
+            # 根据id的唯一性，利用当前查询到的记录中的字段值来实现更新
+            update temp_table set province=@temp_s where id=temp_id;
+            # 游标往后移（此处的游标是不是让你想起了C里面的指针）
+            fetch s_list into temp_id, old_pro;
+        end while;
+        #select * from temp_table;
+    close s_list;  # 关闭游标
+end
+//
+delimiter ;  # 重新定义;为一句sql的结束标志，取消//的所代表的意义
+call test(); # 调用
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
