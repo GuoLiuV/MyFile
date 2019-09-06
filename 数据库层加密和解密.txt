@@ -1,0 +1,51 @@
+-- -------------------加密-------------------------
+DELIMITER $$
+
+USE `invest_gfinvestment`$$
+
+DROP FUNCTION IF EXISTS `func_data_encrypt`$$
+
+CREATE DEFINER=`datadriver`@`%` FUNCTION `func_data_encrypt`(rawData VARCHAR(1000)) RETURNS VARCHAR(1000) CHARSET utf8mb4
+BEGIN
+DECLARE encryptKey VARCHAR(1000);
+DECLARE resultString VARCHAR(1000);
+SET resultString = '';
+-- 前缀
+IF (rawData IS NOT NULL AND rawData != '') THEN
+	-- 查询加密的KEY
+	SELECT vc_value INTO encryptKey FROM sys_setting WHERE vc_code = '16';
+	IF (encryptKey IS NOT NULL AND encryptKey != '') THEN
+		SET resultString = HEX(AES_ENCRYPT(rawData,encryptKey));
+	END IF;
+END IF;
+RETURN resultString;
+END$$
+
+DELIMITER ;
+
+
+
+-- -------------------解密-------------------------
+DELIMITER $$
+
+USE `invest_gfinvestment`$$
+
+DROP FUNCTION IF EXISTS `func_data_dencrypt`$$
+
+CREATE DEFINER=`datadriver`@`%` FUNCTION `func_data_dencrypt`(encryptedData VARCHAR(1000)) RETURNS VARCHAR(1000) CHARSET utf8mb4
+BEGIN
+DECLARE encryptKey VARCHAR(1000);
+DECLARE resultString VARCHAR(1000);
+SET resultString = '';
+-- 前缀
+IF (encryptedData IS NOT NULL AND encryptedData != '') THEN
+	-- 查询加密的KEY
+	SELECT vc_value INTO encryptKey FROM sys_setting WHERE vc_code = '16';
+	IF (encryptKey IS NOT NULL AND encryptKey != '') THEN
+		SET resultString = AES_DECRYPT(UNHEX(encryptedData),encryptKey);
+	END IF;
+END IF;
+RETURN resultString;
+END$$
+
+DELIMITER ;
